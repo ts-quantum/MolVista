@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f4f7f6;
+        padding: 30px;
+    }
+    h1 {
+        color: #2c3e50;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 10px;
+    }
+    h2 {
+        color: #2980b9;
+        margin-top: 30px;
+        border-left: 5px solid #3498db;
+        padding-left: 15px;
+        background: #eaf2f8;
+    }
+    h3 {
+        color: #16a085;
+        margin-top: 20px;
+    }
+    .step-box {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        background: #3498db;
+        color: white;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-weight: bold;
+    }
+    code {
+        background-color: #eee;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-family: 'Consolas', monospace;
+    }
+    .warning-box {
+        background-color: #fff3cd;
+        border-left: 5px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<h1>MolVista Manual</h1>
+<p>Integrated Graphical Interface for Reaction Path Analysis and Trajectory Splicing.</p>
+
+<div class="step-box">
+    <h2>1. Data Import & Setup</h2>
+    <p><b>Load Files:</b> Go to <code>File -> Load trj</code> to import your XYZ trajectory files (e.g., IRC segments). They will appear in the <b>File List</b> on the left.</p>
+    <p><b>Drag & Drop:</b> Simply drag a file from the list and drop it into <code>geo_view_0</code> (left plotter) or <code>geo_view_1</code> (middle plotter). 
+    The <b>Energy Profile</b> and the <b>Atom Index List</b> for each segment will automatically load below the viewers.</p>
+</div>
+
+<h2>2. Alignment Strategies</h2>
+
+<div class="step-box">
+    <h3><span class="badge">Option A</span> Automatic Align</h3>
+    <p>Use <code>Action -> Align</code> for a fully automated connection of two segments.</p>
+    <ul>
+        <li><b>Auto-Flip:</b> The program automatically determines the chronological order (End-to-Start matching) and reverses segments if necessary.</li>
+        <li><b>Result:</b> The aligned structure and merged energy profile are displayed in the third plotter (right).</li>
+    </ul>
+</div>
+
+<div class="step-box">
+    <h3><span class="badge">Option B</span> Align Masked (Manual Control)</h3>
+    <p>Use <code>Action -> Align Masked</code> for complex reactions involving fragment changes.</p>
+    <ul>
+        <li><b>No Auto-Flip:</b> You must manually check the orientation. Use <b>Right-click -> Reverse</b> if needed.</li>
+        <li><b>Define Anchor:</b> Highlight the "moving" atoms (fragments) in the atom list. The *unselected* atoms form the <b>rigid anchor</b> for the overlay.</li>
+        <li><b>Splicing:</b> Enable "Splicing" and set the number of transition images (default: 30) to create smooth Phase-In/Phase-Out animations.</li>
+    </ul>
+</div>
+
+<h2>3. Interaction & Visualization</h2>
+<ul>
+    <li><b>Navigation:</b> Click any point on the <b>Energy Profile</b> to jump directly to that specific molecular geometry.</li>
+    <li><b>Animation:</b> Use the <b>Play/Pause</b> buttons above the plotters to visualize the reaction path.</li>
+    <li><b>Action Log:</b> All operations (RMSDs, rotations, energy offsets) are recorded in the bottom-left log widget for transparency.</li>
+</ul>
+
+<h2>4. Export & Context Menus</h2>
+
+<div class="step-box">
+    <h3>Geo-Plotter (Right-Click)</h3>
+    <ul>
+        <li><b>Export Formats:</b> Save your results as <code>.xyz</code>, <code>.pov</code> (POV-Ray), <code>Blender</code>, <code>.mp4</code>, or <code>.png</code>.</li>
+        <li><b>Tools:</b> Access helper scripts (e.g., <code>Split.py</code>), reverse trajectories, or change atom color schemes.</li>
+    </ul>
+</div>
+
+<div class="step-box">
+    <h3>Quantum Chemistry Bridge (Split Script)</h3>
+    <p>After exporting a merged trajectory, MolVista offers to generate a <code>_split.py</code> Python template.</p>
+    <ul>
+        <li><b>Purpose:</b> This script serves as a bridge to electronic structure theory (e.g., ORCA).</li>
+        <li><b>Workflow:</b> It automatically breaks the trajectory into single frames and generates the necessary input files and shell scripts for batch processing.</li>
+        <li><b>Customization:</b> Open the <code>_split.py</code> in any text editor to adjust the <code>ORCA_HEADER</code> (method, basis set) or charges before execution.</li>
+    </ul>
+</div>
+
+<div class="step-box">
+    <h3>Energy Profile (Right-Click)</h3>
+    <ul>
+        <li><b>Export:</b> Save the plot as a high-resolution <code>.png</code> or the raw data as a <code>.txt</code> file.</li>
+        <li><b>Copy:</b> Copy energy values directly to the clipboard for external use in Excel or Origin.</li>
+    </ul>
+</div>
+
+<div class="warning-box">
+    <strong>Developer Tip:</strong> Use the <code>Split.py</code> script to convert your merged XYZ trajectory into a series of MOLDEN files for subsequent electronic structure analysis (e.g., ESP or Orbital localization).
+</div>
+
+<p style="text-align: center; color: #7f8c8d; font-size: 0.8em; margin-top: 40px;">
+    MolVista v1.0 &copy; 2026 - Molecular Visualization Suite Dr. Tobias Schulz 
+</p>
+
+</body>
+</html>

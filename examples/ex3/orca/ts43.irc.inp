@@ -1,0 +1,13 @@
+! IRC PBE0 RIJK def2-SVP Def2/JK
+
+%maxcore 2048
+
+%pal
+   nprocs 8
+end
+
+%irc
+    MaxIter 100
+end
+
+* xyzfile 1 1 ts43.xyz
