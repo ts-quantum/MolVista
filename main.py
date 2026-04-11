@@ -1,39 +1,57 @@
 import sys
 import os, re, io
-import platform
+#import platform
 
-# WICHTIG: Dies muss VOR jedem anderen Import stehen
 os.environ["QT_API"] = "pyside6"
 
 import warnings
+import pyvista as pv
 from pyvista import PyVistaDeprecationWarning
 warnings.filterwarnings("ignore", category=PyVistaDeprecationWarning)
+from pyvistaqt import QtInteractor
 
-
-from qtpy import QtWidgets, QtCore, uic, QtGui
-from PySide6.QtWidgets import QApplication, QColorDialog, QFileDialog, QMessageBox
-from PySide6.QtWidgets import QDialog, QTextEdit, QVBoxLayout
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtWidgets import (QApplication, QColorDialog, QFileDialog, 
+                             QMessageBox, QDialog, QTextEdit, QVBoxLayout)
 from PySide6.QtGui import QColor
-from PySide6.QtCore import QStringListModel, Qt
-import pyvista as pv
-from pyvistaqt import QtInteractor 
-from collections import defaultdict
-from pyscf import data
-from pyscf.data import elements
+from PySide6.QtCore import QStringListModel 
 
+from collections import defaultdict
+import matplotlib
+matplotlib.use('QtAgg')
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.ticker import ScalarFormatter
 
 import numpy as np
-from pathlib import Path
 import pyperclip
-import pandas as pd
 
-sys.path.insert(1,'./modules')
-from modules import *
-from modules import ExportWorker, OneFileExportWorker
+from modules.window import Ui_MainWindow
+from modules.modules import draw_mol, align_structures, get_euler_angles, find_best_flip_strategy
+from modules.modules import find_mapping, transform_trajectory, create_smooth_transition, transform_trajectory_masked
+from modules.modules import export_pov_header, export_pov_mol, create_split_nw, create_split_orca, create_split_psi4
+from modules.modules import generate_blender_script, generate_blender_script_multi
+from modules.modules import ExportWorker, OneFileExportWorker
 
+# Atomic Symbol to Atomic Number Mapping
+SYMBOL_TO_Z = {
+            'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7, 'O': 8, 'F': 9, 'Ne': 10,
+            'Na': 11, 'Mg': 12, 'Al': 13, 'Si': 14, 'P': 15, 'S': 16, 'Cl': 17, 'Ar': 18,
+            'K': 19, 'Ca': 20, 'Sc': 21, 'Ti': 22, 'V': 23, 'Cr': 24, 'Mn': 25, 'Fe': 26,
+            'Co': 27, 'Ni': 28, 'Cu': 29, 'Zn': 30, 'Ga': 31, 'Ge': 32, 'As': 33, 'Se': 34,
+            'Br': 35, 'Kr': 36, 'Rb': 37, 'Sr': 38, 'Y': 39, 'Zr': 40, 'Nb': 41, 'Mo': 42,
+            'Tc': 43, 'Ru': 44, 'Rh': 45, 'Pd': 46, 'Ag': 47, 'Cd': 48, 'In': 49, 'Sn': 50,
+            'Sb': 51, 'Te': 52, 'I': 53, 'Xe': 54, 'Cs': 55, 'Ba': 56, 'La': 57, 'Ce': 58,
+            'Pr': 59, 'Nd': 60, 'Pm': 61, 'Sm': 62, 'Eu': 63, 'Gd': 64, 'Tb': 65, 'Dy': 66,
+            'Ho': 67, 'Er': 68, 'Tm': 69, 'Yb': 70, 'Lu': 71, 'Hf': 72, 'Ta': 73, 'W': 74,
+            'Re': 75, 'Os': 76, 'Ir': 77, 'Pt': 78, 'Au': 79, 'Hg': 80, 'Tl': 81, 'Pb': 82,
+            'Bi': 83, 'Po': 84, 'At': 85, 'Rn': 86, 'Fr': 87, 'Ra': 88, 'Ac': 89, 'Th': 90,
+            'Pa': 91, 'U': 92, 'Np': 93, 'Pu': 94, 'Am': 95, 'Cm': 96, 'Bk': 97, 'Cf': 98,
+            'Es': 99, 'Fm': 100, 'Md': 101, 'No': 102, 'Lr': 103, 'Rf': 104, 'Db': 105,
+            'Sg': 106, 'Bh': 107, 'Hs': 108, 'Mt': 109, 'Ds': 110, 'Rg': 111, 'Cn': 112,
+            'Nh': 113, 'Fl': 114, 'Mc': 115, 'Lv': 116, 'Ts': 117, 'Og': 118
+        }
+Z_TO_SYMBOL = {v: k for k, v in SYMBOL_TO_Z.items()}
 class MoleculeData:
     def __init__(self, *, name=None, atom_points=None, atom_types=None, energies=None):
         self.name = name
@@ -74,12 +92,9 @@ class MoleculeData:
                 for entry in block:
                     parts = entry.split()
                     if len(parts) < 4: continue
-                    symbol = parts[0]
-                    try: 
-                        at_num = data.elements.charge(symbol) # map symbol to atom number
-                    except KeyError:
-                        at_num = 0 
-                    types.append(at_num)
+                    symbol = parts[0].capitalize()
+                    at_num = SYMBOL_TO_Z.get(symbol, 0)
+                    types.append(at_num) 
                     coords.append([float(x) for x in parts[1:4]])
                 
                 atom_types.append(np.array(types))
@@ -124,13 +139,31 @@ class HelpWindow(QDialog):
             with open(file_path, "r", encoding="utf-8") as f:
                 return f.read()
         return "<h1>Manual file not found.</h1>"
+    
+class CreditsWindow(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("MolVista Credits")
+        self.resize(600, 400)
+        layout = QVBoxLayout(self)
+        
+        self.text_area = QTextEdit()
+        self.text_area.setReadOnly(True)
 
-class MoleculeApp(QtWidgets.QMainWindow):
+        help_text_html = self.load_help_content()
+        self.text_area.setHtml(help_text_html) 
+        layout.addWidget(self.text_area)
+
+    def load_help_content(self):
+        file_path = os.path.join(os.path.dirname(__file__), "./modules/credits.html")
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()
+        return "<h1>Credits file not found.</h1>"
+class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
-        
-        # load GUI *.ui file (MainWindow)
-        uic.loadUi("./modules/gui.ui", self)
+        self.setupUi(self)
         self.menuBar().setNativeMenuBar(False)
         
         # prepare drag and drop for data processing
@@ -226,6 +259,7 @@ class MoleculeApp(QtWidgets.QMainWindow):
         self.actionAlign.triggered.connect(self.align)
         self.actionAlign_masked.triggered.connect(self.align_masked)
         self.actionHelp.triggered.connect(self.help)
+        self.actionCredits.triggered.connect(self.credits)
 
         self.button_toggle_0.clicked.connect(self.toggle_0)
         self.button_toggle_1.clicked.connect(self.toggle_1)
@@ -328,7 +362,7 @@ class MoleculeApp(QtWidgets.QMainWindow):
         }
         # Standard Radius for unknown elements
         self.default_radius = 1.0
-    
+
     def _setup_split_dialog(self):
         self.split_dialog = QMessageBox(self)
         self.split_dialog.setWindowTitle("IRC Batch Processing")
@@ -470,7 +504,7 @@ class MoleculeApp(QtWidgets.QMainWindow):
         self.draw_point(x, y, idx, tab, data_)
 
         atom_ids = data_.atom_types[idx]
-        symbols = [elements.ELEMENTS[aid] for aid in atom_ids]
+        symbols = [Z_TO_SYMBOL.get(aid, "X") for aid in atom_ids]
         types = []
         for i in range(len(symbols)):
             label = f"{i:3d}: {symbols[i]}"
@@ -885,6 +919,12 @@ class MoleculeApp(QtWidgets.QMainWindow):
         self.help_win.show()
         self.help_win.raise_()
 
+    def credits(self):
+        if not hasattr(self, 'credits_win'):
+            self.credits_win = CreditsWindow(self)
+        self.credits_win.show()
+        self.credits_win.raise_()
+
     # geo_plotter drop-down 
     def show_geo_menu(self, pos):
         widget = self.sender()
@@ -1010,7 +1050,7 @@ class MoleculeApp(QtWidgets.QMainWindow):
                 for i in range(n_atoms):
                     atom_coord = data_.atom_points[j][i]
                     at_num = data_.atom_types[j][i]
-                    symbol = elements.ELEMENTS[at_num] 
+                    symbol = Z_TO_SYMBOL.get(at_num, "X") 
                     f.write(f"{symbol:2} {atom_coord[0]:12.8f} {atom_coord[1]:12.8f} {atom_coord[2]:12.8f}\n")
         self.log(f"xyz data {data_.name} written as: {os.path.basename(path)}", "success")
 
@@ -1303,8 +1343,12 @@ class MoleculeApp(QtWidgets.QMainWindow):
         if action == copy_data:
             obj = self.data_attached[canvas_idx]
             data_ = self.dataset_dict.get(obj)
-            df = pd.DataFrame({'Energies': data_.energies})
-            pyperclip.copy(df.to_csv(sep='\t', index=True, header=True))
+            lines = ["\tEnergies"] # Header
+            for i, energy in enumerate(data_.energies):
+                lines.append(f"{i}\t{energy}")
+            
+            output = "\n".join(lines)
+            pyperclip.copy(output)
             self.log(f"{data_.name} copied to clipboard", "success")
         if action == copy_img:
             canvas = self.profile_canvases[canvas_idx]

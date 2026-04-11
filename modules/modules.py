@@ -704,7 +704,6 @@ if __name__ == "__main__":
         f.write(template_content)
     return script_name
 
-
 #### draw for blender export:
 def draw_mol_bld(atom_points, atom_types, cpk_colors=None, cov_radii=None, default_radius=None):
     all_parts = []

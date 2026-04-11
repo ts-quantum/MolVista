@@ -1,0 +1,38 @@
+# Credits & Licensing
+
+MolVista is a specialized tool for chemical trajectory analysis and visualization. This document lists the core technologies and third-party libraries that make this project possible.
+
+## Core Frameworks
+- **[PySide6](https://qt.io)** (LGPL v3): The primary GUI framework.
+- **[QtPy](https://github.com)** (MIT): Compatibility layer for Qt bindings.
+
+## 3D Rendering & Visualization
+- **[PyVista](https://pyvista.org)** (MIT): High-level interface to the Visualization Toolkit (VTK).
+- **[VTK](https://vtk.org)** (BSD): The underlying 3D graphics engine.
+- **[PyVistaQT](https://github.com)** (MIT): Integration of PyVista interactors into Qt widgets.
+
+## Scientific Computing
+- **[NumPy](https://numpy.org)** (BSD): Essential for numerical array operations.
+- **[SciPy](https://scipy.org)** (BSD): Used for spatial distance calculations and the Hungarian Algorithm (`linear_sum_assignment`).
+- **[Pandas](https://pydata.org)** (BSD): Efficient management of tabular data.
+- **[Matplotlib](https://matplotlib.org)** (PSF): Responsible for 2D plots and data visualization.
+
+## Utilities
+- **[Pyperclip](https://github.com)** (BSD): Cross-platform clipboard support.
+- **[psutil](https://github.com)** (BSD): System resource and process management.
+
+---
+DISTRIBUTION & SOURCE CODE:
+The source code for this application is available at:
+https://github.com/ts-quantum/MolVISTA
+
+## License Summary
+
+### This Project
+**MolVista** is distributed under the **GNU GPL v3** license. 
+
+### Third-Party Licenses
+This application bundles several third-party libraries. Their respective licenses (MIT, BSD, PSF, LGPL) are respected. In compliance with the **GNU LGPL v3** (used by PySide6), the source code for this application is made available to the public.
+
+## Disclaimer
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
