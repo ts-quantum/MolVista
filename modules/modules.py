@@ -411,9 +411,9 @@ def export_pov_mol(points, atom_types,cov_radii=None, default_radius=None,
         """)
 
 ### XYZ Split Script ####
-def create_split_template(xyz_path):
+def create_split_orca(xyz_path):
     """
-    Creates a pre-configured Python script (_split.py) in the same directory
+    Creates a pre-configured ORCA Python script (_split.py) in the same directory
     as the exported XYZ file for further batch processing.
     """
     if not xyz_path:
@@ -425,69 +425,285 @@ def create_split_template(xyz_path):
     script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split.py")
 
     # Das Template als String (mit Platzhaltern)
-    template_content = f"""import os
-
-# --- CONFIGURATION: ADJUST BEFORE RUNNING ---
-XYZ_INPUT = "{xyz_filename}.xyz"  # The trajectory to split
-CHARGE = 0
-MULT = 1
+    template_content = f"""# --- CONFIGURATION: ADJUST BEFORE RUNNING ---
+##### created by MolVista (C) 2026 by Dr. Tobias Schulz
+##### This Python Script will create a series of ORCA Input files from 
+##### a given IRC Trajectory along with a "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
+### Edit method, basis set, etc. here
+charge =''  # e.g. '0'	
+mult ='' 	# e.g. '1'		
+basis =''   # e.g. 'def2-SVP'
+method =''  # e.g. 'HF', 'B3LYP', 'PBE0' or other XC
+mem = '2000'
+nproc = '8'
+### adapt to your specific environment
 ORCA_EXE = "/usr/local/orca_6_1_0/orca"
 ORCA_2MKL = "/usr/local/orca_6_1_0/orca_2mkl"
+# pre-configured by MolAlign
+inp_file = '{os.path.splitext(xyz_filename)[0]}.xyz' 	
 
-# Custom Header (Edit method, basis set, etc. here)
-ORCA_HEADER = \"\"\"! HF 6-31G
-%maxcore 1200
-%pal nprocs 8 end
-\"\"\"
+import os, sys
 
 def run_split():
-    if not os.path.exists(XYZ_INPUT):
-        print(f"Error: {{XYZ_INPUT}} not found.")
-        return
-
-    with open(XYZ_INPUT, 'r') as f:
+    with open(inp_file, 'r') as f:
         lines = f.readlines()
-
     try:
         num_atoms = int(lines[0].strip())
     except:
         print("Error: Invalid XYZ format.")
         return
-
     block_size = num_atoms + 2
     steps = len(lines) // block_size
-    base = os.path.splitext(XYZ_INPUT)[0]
+    base = os.path.splitext(inp_file)[0]
     wrapper_name = f"run_{{base}}_batch.sh"
-
     with open(wrapper_name, 'w') as w:
         w.write("#!/bin/bash\\n\\n")
         for i in range(steps):
             label = f"{{base}}_{{i:03d}}"
             inp = f"{{label}}.inp"
             out = f"{{label}}.out"
-            
-            # Write single point input
+            xyz_list = lines[i*block_size + 2 : (i+1)*block_size]
+            xyz_body = "".join(xyz_list).rstrip()
+            body = f\"\"\"! {{method}} {{basis}}
+
+%maxcore {{mem}}
+%pal nprocs {{nproc}} end
+
+* xyz {{charge}} {{mult}}
+{{xyz_body}}
+*
+\"\"\"
+            #write input file
             with open(inp, 'w') as f_inp:
-                f_inp.write(ORCA_HEADER)
-                f_inp.write(f"* xyz {{CHARGE}} {{MULT}}\\n")
-                f_inp.writelines(lines[i*block_size + 2 : (i+1)*block_size])
-                f_inp.write("*\\n")
-            
-            # Commands for shell script
+                f_inp.writelines(body)
+			# Commands for shell script
             w.write(f"{{ORCA_EXE}} {{inp}} > {{out}} 2>&1 && \\\\\\n")
             w.write(f"{{ORCA_2MKL}} {{label}} -molden && \\\\\\n")
             w.write(f"mv {{label}}.molden.input {{label}}.molden && \\\\\\n")
             w.write(f"echo 'Frame {{i:03d}} finished.'\\n\\n")
-
     os.chmod(wrapper_name, 0o755)
-    print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")
+    print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
+    missing = [name for name, val in [("Charge", charge), ("Mult", mult), ("Basis", basis), ("Method", method)] if not str(val)]
+    if missing:
+        print(f"Error: Input missing: {{', '.join(missing)}}")
+        sys.exit()
     run_split()
 """
     with open(script_name, 'w', encoding='utf-8') as f:
         f.write(template_content)
     return script_name
+
+def create_split_nw(xyz_path):
+    """
+    Creates a pre-configured NWChem Python script (_split.py) in the same directory
+    as the exported XYZ file for further batch processing.
+    """
+    if not xyz_path:
+        return
+
+    work_dir = os.path.dirname(xyz_path)
+    xyz_filename = os.path.basename(xyz_path)
+    # Name des Hilfsskripts basierend auf der XYZ-Datei
+    script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split.py")
+
+    # Das Template als String (mit Platzhaltern)
+    template_content = f"""# --- CONFIGURATION: ADJUST BEFORE RUNNING ---
+##### created by MolVista (C) 2026 by Dr. Tobias Schulz
+##### This Python Script will create a series of NWChem Input files from 
+##### a given IRC Trajectory along with a "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
+### Edit method, basis set, etc. here
+charge = ''	# e.g. '0'	
+mult = '' # e.g. '1'		
+basis = '' # e.g. '6-31G'
+method_type = '' # or 'scf' or 'dft'
+dft_method = '' # e.g. 'xc b3lyp'
+method_details =f\"\"\"
+ {{dft_method}}
+ mult {{mult}}   
+\"\"\"
+### directories will be created by the "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
+work_dir = 'calc'
+scr_dir = 'scr'
+### adapt to your specific environment
+nw_cmd = 'mpiexec -np 8 nwchem'
+# pre-configured by MolAlign
+inp_file = '{os.path.splitext(xyz_filename)[0]}.xyz'	
+
+import os, sys 
+
+def run_split():
+    with open(inp_file, 'r') as f:
+        lines = f.readlines()
+    try:
+        num_atoms = int(lines[0].strip())
+    except:
+        print("Error: Invalid XYZ format.")
+        return
+    
+    block_size = num_atoms + 2
+    steps = len(lines) // block_size
+    base = os.path.splitext(inp_file)[0]
+    
+    wrapper_name = f"run_{{base}}_batch.sh"
+    with open(wrapper_name, 'w') as w:
+        w.write("#!/bin/bash\\n\\n")
+        w.write(f"mkdir -p ./{{work_dir}}\\n\\n")
+        w.write(f"mkdir -p ./{{scr_dir}}\\n\\n")
+        for i in range(steps):
+            xyz_list = lines[i*block_size + 2 : (i+1)*block_size]
+            xyz_body = "".join(xyz_list).rstrip()
+            body = f\"\"\"Title {{base}}_{{i:03d}}
+echo
+start {{base}}_{{i:03d}} 
+
+memory 10000 mb
+
+permanent_dir ./{{work_dir}}
+scratch_dir   ./{{scr_dir}}
+
+charge {{charge}}
+geometry
+{{xyz_body}} 
+end
+
+basis
+ * library {{basis}}
+end
+
+{{method_type}}
+{{method_details}}
+end
+
+task {{method_type}} energy ignore
+
+property
+ moldenfile
+ molden_norm none
+end
+
+task {{method_type}} property ignore 
+\"\"\"
+            inp = f"{{base}}_{{i:03d}}.nw"
+            out = f"{{base}}_{{i:03d}}.out"
+            with open(inp, 'w') as f_inp:
+                f_inp.writelines(body)
+            
+            w.write(f"{{nw_cmd}} {{inp}} > {{out}} 2>&1 && \\\\\\n" )
+            w.write(f"mv ./{{work_dir}}/{{base}}_{{i:03d}}.molden ./ 2>/dev/null && \\\\\\n")
+            w.write(f"echo 'Frame {{i:03d}} finished.'\\n\\n")
+    os.chmod(wrapper_name, 0o755)
+    print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
+
+if __name__ == "__main__":
+    missing = [name for name, val in [("Charge", charge), ("Basis", basis), ("Method", method_type)] if not str(val)]
+    if missing:
+        print(f"Error: Input missing: {{', '.join(missing)}}")
+        sys.exit()
+    run_split()
+
+"""
+    with open(script_name, 'w', encoding='utf-8') as f:
+        f.write(template_content)
+    return script_name
+
+def create_split_psi4(xyz_path):
+    """
+    Creates a pre-configured PSI4-Python script (_split.py) in the same directory
+    as the exported XYZ file for further batch processing.
+    """
+    if not xyz_path:
+        return
+
+    work_dir = os.path.dirname(xyz_path)
+    xyz_filename = os.path.basename(xyz_path)
+    # Name des Hilfsskripts basierend auf der XYZ-Datei
+    script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split.py")
+
+    # Das Template als String (mit Platzhaltern)
+    template_content = f"""# --- CONFIGURATION: ADJUST BEFORE RUNNING ---
+##### created by MolVista (C) 2026 by Dr. Tobias Schulz
+##### This Python Script to run a Psi-4 single point calculation
+##### for each point on a given IRC Trajectory and to produce a 
+##### .molden and .fchk file for each point
+##### must be run inside a Psi-Conda environment
+### Edit method, basis set, etc. here
+charge = '' # e.g. '0'
+mult = '' # e.g. '1'
+basis = '' # e.g. 'cc-pVDZ'
+ref = ''  # e.g. 'rhf', 'rks', 'uhf', 'uks', ...
+method = '' # e.g. 'scf', 'pbe0', 'b3lyp', ...
+mem = '1000mb'
+nproc = 8
+#pre-configured by MolAlign
+xyz_input = '{os.path.splitext(xyz_filename)[0]}.xyz' 
+
+import os, sys
+import psi4
+psi4.set_memory(mem)
+psi4.core.set_num_threads(nproc)
+
+def run_split():
+	with open(xyz_input, 'r') as f:
+		lines = f.readlines()
+
+	try:
+		num_atoms = int(lines[0].strip())
+	except: 
+		print("Error: Invalid XYZ format.")
+		return
+	
+	block_size = num_atoms + 2
+	steps = len(lines) // block_size
+	base = os.path.splitext(xyz_input)[0]
+
+	psi4.set_options({{
+	     'basis': basis,
+	     'scf_type': 'df',
+	     'reference': ref,  
+	     'g_convergence': 'gau_tight',
+	     'guess' : 'read'
+	}})
+	initial = "".join(lines[2 : block_size])
+	mol= psi4.geometry(f\"\"\"
+		{{charge}} {{mult}}
+		{{initial}}
+		units angstrom
+		no_reorient
+		no_com
+		\"\"\")
+	
+	last_wfn = None
+
+	for i in range(steps):
+		xyz_list = lines[i*block_size + 2 : (i+1)*block_size]
+		xyz_body = "".join(xyz_list)
+		temp_mol = psi4.geometry(f"units angstrom\\n{{xyz_body}}")
+		mol.set_geometry(temp_mol.geometry())
+		#energy calculation
+		if last_wfn is not None:
+			energy, wfn = psi4.energy(method, molecule=mol, return_wfn=True, restart_wfn=last_wfn)
+		else:
+			energy, wfn = psi4.energy(method, molecule=mol, return_wfn=True)
+		last_wfn = wfn
+		
+		psi4.fchk(wfn, f'{{base}}_{{i:03d}}.fchk')
+		psi4.molden(wfn, f'{{base}}_{{i:03d}}.molden')
+	    
+		psi4.core.clean()
+	
+if __name__ == "__main__":
+    missing = [name for name, val in [("Charge", charge), ("Mult", mult), ("Basis", basis), ("Ref", ref), ("Method", method)] if not str(val)]
+    if missing:
+        print(f"Error: Input missing: {{', '.join(missing)}}")
+        sys.exit()
+    run_split()
+"""
+    with open(script_name, 'w', encoding='utf-8') as f:
+        f.write(template_content)
+    return script_name
+
 
 #### draw for blender export:
 def draw_mol_bld(atom_points, atom_types, cpk_colors=None, cov_radii=None, default_radius=None):

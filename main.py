@@ -274,6 +274,9 @@ class MoleculeApp(QtWidgets.QMainWindow):
         self.log_widget.setMaximumBlockCount(1000) 
         self.log_widget.setFont(QtGui.QFont("Courier New", 9))
 
+        #setup dialog for split script
+        self._setup_split_dialog()
+
         # Atom Colors
         self.cpk_colors = defaultdict(lambda: "magenta")
         self.cpk_colors.update({
@@ -325,6 +328,20 @@ class MoleculeApp(QtWidgets.QMainWindow):
         }
         # Standard Radius for unknown elements
         self.default_radius = 1.0
+    
+    def _setup_split_dialog(self):
+        self.split_dialog = QMessageBox(self)
+        self.split_dialog.setWindowTitle("IRC Batch Processing")
+        self.split_dialog.setText("<b>Generate Python Split-Script</b>")
+        self.split_dialog.setInformativeText(
+        "Create single-point input files from IRC trajectory for properties (e.g. ESP/HOMO) via BatchMol."
+        )
+        # Define Buttons
+        self.btn_orca = self.split_dialog.addButton("ORCA", QMessageBox.ActionRole)
+        self.btn_nwchem = self.split_dialog.addButton("NWChem", QMessageBox.ActionRole)
+        self.btn_psi4 = self.split_dialog.addButton("Psi4", QMessageBox.ActionRole)
+        btn_cancel = self.split_dialog.addButton(QMessageBox.Cancel)
+        self.split_dialog.setDefaultButton(btn_cancel)
 
     # Action Log procedure
     def log(self, message, category="info"):
@@ -998,15 +1015,23 @@ class MoleculeApp(QtWidgets.QMainWindow):
         self.log(f"xyz data {data_.name} written as: {os.path.basename(path)}", "success")
 
         # Create split script
-        if QMessageBox.question(self, "Batch Processing", 
-                        "Create a pre-configured Python split-script for this file?",
-                        QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
-            try: 
-                script_name = create_split_template(path)
-                self.log(f"Batch template created: {os.path.basename(script_name)}", "success")
-            except Exception as e:
-                self.log(f"Failed to create template: {str(e)}", "error")
+        self.split_dialog.exec_()
+        clicked = self.split_dialog.clickedButton()
+        script_map = {
+            self.btn_orca: ("ORCA", create_split_orca),
+            self.btn_nwchem: ("NWChem", create_split_nw),
+            self.btn_psi4: ("Psi4", create_split_psi4)
+        }
 
+        if clicked in script_map:
+            name, func = script_map[clicked]
+            try: 
+                # Führt die zugehörige Funktion direkt aus
+                script_name = func(path)
+                self.log(f"{name} batch template created: {os.path.basename(script_name)}", "success")
+            except Exception as e:
+                self.log(f"Failed to create {name} template: {str(e)}", "error")
+    
     def handle_save_png(self, idx):
         path, _ = QFileDialog.getSaveFileName(None, "Save Image", "image", "Image (*.png)")
         if path:
