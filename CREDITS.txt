@@ -24,7 +24,7 @@ MolVista is a specialized tool for chemical trajectory analysis and visualizatio
 ---
 DISTRIBUTION & SOURCE CODE:
 The source code for this application is available at:
-https://github.com/ts-quantum/MolVISTA
+https://github.com/ts-quantum/MolVista
 
 ## License Summary
 
