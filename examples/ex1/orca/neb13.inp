@@ -1,0 +1,14 @@
+! NEB-TS PBE0 RIJK def2-SVP Def2/JK
+
+%maxcore 2048
+
+%pal
+   nprocs 8
+end
+
+%neb
+  neb_end_xyzfile "3.opt.xyz"
+  NImages 125 
+end
+
+* xyzfile 0 1 1.opt.xyz

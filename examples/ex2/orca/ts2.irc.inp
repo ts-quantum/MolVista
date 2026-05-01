@@ -1,0 +1,13 @@
+! IRC B3LYP def2-SVP UKS
+
+%maxcore 2048
+
+%pal
+   nprocs 8
+end
+
+%irc
+    MaxIter 100
+end
+
+* xyzfile 0 2 ts2.xyz

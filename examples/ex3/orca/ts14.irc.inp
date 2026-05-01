@@ -1,0 +1,19 @@
+! IRC PBE0 RIJK def2-SVP Def2/JK
+
+%maxcore 2048
+
+%pal
+   nprocs 8
+end
+
+%scf Guess MORead
+     MOInp "ts14.f.gbw"
+end
+
+%irc
+    InitHess read
+    Hess_Filename "ts14.f.hess"
+    MaxIter 100
+end
+
+* xyzfile 1 1 ts14.opt.xyz
