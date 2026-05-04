@@ -1302,6 +1302,17 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.log(f"Failed to copy image: {str(e)}", "error")
 
     def handle_export_video(self, idx):
+        
+        if platform.system() == "Darwin":
+            try:
+                import imageio_ffmpeg
+                ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+                os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_exe
+            except ImportError as e:
+                QMessageBox.critical(self, "Export Error", 
+            "FFmpeg not found. Video-Export not available.")
+                return
+        
         # 1. define target file
         path, _ = QFileDialog.getSaveFileName(self, "Save Video", "animation.mp4", "Video (*.mp4);;GIF (*.gif)")
         if not path: return

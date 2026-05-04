@@ -11,6 +11,10 @@ MolVista is a specialized tool for chemical trajectory analysis and visualizatio
 - **[VTK](https://vtk.org)** (BSD): The underlying 3D graphics engine.
 - **[PyVistaQT](https://github.com)** (MIT): Integration of PyVista interactors into Qt widgets.
 
+## Video Export & Multimedia
+- **[imageio-ffmpeg](https://github.com)** (MIT): Interface and wrapper for FFmpeg binaries.
+- **[FFmpeg](https://ffmpeg.org)** (LGPL v2.1): Cross-platform solution to record, convert and stream audio and video. Bundled via imageio-ffmpeg.
+
 ## Scientific Computing
 - **[NumPy](https://numpy.org)** (BSD): Essential for numerical array operations.
 - **[SciPy](https://scipy.org)** (BSD): Used for spatial distance calculations and the Hungarian Algorithm (`linear_sum_assignment`).
