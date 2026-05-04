@@ -1312,7 +1312,14 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 QMessageBox.critical(self, "Export Error", 
             "FFmpeg not found. Video-Export not available.")
                 return
-        
+        try:
+            from imageio.core import plugin_manager
+            if "ffmpeg" not in plugin_manager.list_plugins():
+                # Wir registrieren das Plugin manuell, falls Nuitka es versteckt hat
+                import imageio.plugins.ffmpeg
+        except Exception as e:
+            print(f"Plugin-Registration error: {e}")
+            
         # 1. define target file
         path, _ = QFileDialog.getSaveFileName(self, "Save Video", "animation.mp4", "Video (*.mp4);;GIF (*.gif)")
         if not path: return
