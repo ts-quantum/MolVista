@@ -877,9 +877,7 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
         if rmsd >= self.rmsd_thr and self.bridging == True:
             # bridge segments in case of high rmsd
             trans_pts, trans_tps = bridge_segments(coords1, aligned_coords2, types, steps=self.bridging_pts) 
-        """
-change!!!!! list()
-"""        
+
         combined_points = np.array(list(data_[0].atom_points) + list(trans_pts) + list(aligned_traj2_coords[1:]))
         combined_types = data_[0].atom_types + list(trans_tps) + data_[1].atom_types[1:]
 

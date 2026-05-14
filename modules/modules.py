@@ -267,9 +267,6 @@ def transform_trajectory_masked(trajectory_coords, r_matrix, ref_centroid, targe
 def bridge_segments(coords_1, coords_2, types, steps=10):
     bridge = []
     bridge_types = []
-    """
-#### change!!!!
-"""
     c1 = np.array(coords_1)
     c2 = np.array(coords_2)
     for i in range(1,steps +1):
