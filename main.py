@@ -579,7 +579,7 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.profile_canvases[tab].draw()
 
-    def draw_point(self, x, y, id, tab, data_):
+    def update_point(self, x, y, tab):
         # MatPlotLib Canvas (Energy Profile)
         ax = self.profile_canvases[tab].axes
         canvas = self.profile_canvases[tab]
@@ -598,9 +598,11 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
         current_qcolor = QColor.fromRgbF(*bg_color_rgba)
         text_color = "black" if self.is_color_light(current_qcolor) else "white"
         ax.yaxis.get_offset_text().set_color(text_color)
-
         # Refresh Plot Area
         self.profile_canvases[tab].draw()
+
+    def draw_point(self, x, y, id, tab, data_):
+        self.update_point(x,y,tab)
         try:
             plotter = self.geo_plotters[tab]
             plotter.clear_actors() # clear PyVista Plotter 
@@ -877,8 +879,8 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
         if rmsd >= self.rmsd_thr and self.bridging == True:
             # bridge segments in case of high rmsd
             trans_pts, trans_tps = bridge_segments(coords1, aligned_coords2, types, steps=self.bridging_pts) 
-        
-        combined_points = np.array(data_[0].atom_points + list(trans_pts) + aligned_traj2_coords[1:])
+
+        combined_points = np.array(list(data_[0].atom_points) + list(trans_pts) + list(aligned_traj2_coords[1:]))
         combined_types = data_[0].atom_types + list(trans_tps) + data_[1].atom_types[1:]
 
         # Energy Offset Calculation
@@ -1330,10 +1332,19 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
         plotter = self.geo_plotters[idx]
         length = len(data_.atom_points)
 
-        # 3. Start Movie-Writer 
-        # 'framerate'  (e.g. 15-24 FPS)
-        plotter.open_movie(path, framerate=self.fps, quality=self.qual, macro_block_size=1)
-
+        if platform.system() == "Darwin":
+            # 3. Start Movie-Writer 
+            # 'framerate'  (e.g. 15-24 FPS)
+            plotter.open_movie(path, framerate=self.fps, quality=self.qual, macro_block_size=1)
+        else:
+            plotter.render()
+            h, w, _ = plotter.image.shape
+            w_target, h_target = w // 2 * 2, h // 2 * 2
+            plotter.open_movie(path, framerate=self.fps, 
+                           quality=self.qual, 
+                           macro_block_size=None
+                           #ffmpeg_params=['-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2']
+                        )
         # ProgressBar
         self.progressBar.setFormat("Video Export started... %p%") 
         self.progressBar.setRange(0, length)
@@ -1356,9 +1367,18 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 # IMPORTANT reset_camera=False, to keep camera focus steady
                 plotter.add_mesh(mesh, reset_camera=False, smooth_shading=True, **args)
             
-            # capture picture
-            plotter.write_frame()
+            if platform.system() == "Darwin":
+                # capture picture
+                plotter.write_frame()
+            else:
+                current_img = plotter.image
+                current_img = current_img[:h_target, :w_target]
+                plotter.mwriter.append_data(current_img)
             
+            #energy profile update
+            y = data_.energies[i]
+            x = i
+            self.update_point(x,y,idx)
             # GUI Update
             self.progressBar.setValue(i + 1)
             QtWidgets.QApplication.processEvents()
@@ -1485,8 +1505,9 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
         
         obj_prefix = "mol" # For the object inside: mol_001
         script_name = "import_and_animate.py" # blender Script
-        
-        self.progressBar.setFormat("Bld Export started... %p%")
+
+        self.progressBar.setRange(0, 0) 
+        self.progressBar.setTextVisible(True)
         self.progressBar.show()
         self.cancel_export.show()
         self.one_worker = OneFileExportWorker(data_, path, obj_prefix, script_name, self.cpk_colors, 
