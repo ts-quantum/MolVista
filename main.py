@@ -579,7 +579,7 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.profile_canvases[tab].draw()
 
-    def draw_point(self, x, y, id, tab, data_):
+    def update_point(self, x, y, tab):
         # MatPlotLib Canvas (Energy Profile)
         ax = self.profile_canvases[tab].axes
         canvas = self.profile_canvases[tab]
@@ -598,9 +598,11 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
         current_qcolor = QColor.fromRgbF(*bg_color_rgba)
         text_color = "black" if self.is_color_light(current_qcolor) else "white"
         ax.yaxis.get_offset_text().set_color(text_color)
-
         # Refresh Plot Area
         self.profile_canvases[tab].draw()
+
+    def draw_point(self, x, y, id, tab, data_):
+        self.update_point(x,y,tab)
         try:
             plotter = self.geo_plotters[tab]
             plotter.clear_actors() # clear PyVista Plotter 
@@ -1373,6 +1375,10 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 current_img = current_img[:h_target, :w_target]
                 plotter.mwriter.append_data(current_img)
             
+            #energy profile update
+            y = data_.energies[i]
+            x = i
+            self.update_point(x,y,idx)
             # GUI Update
             self.progressBar.setValue(i + 1)
             QtWidgets.QApplication.processEvents()
@@ -1499,8 +1505,9 @@ class MoleculeApp(QtWidgets.QMainWindow, Ui_MainWindow):
         
         obj_prefix = "mol" # For the object inside: mol_001
         script_name = "import_and_animate.py" # blender Script
-        
-        self.progressBar.setFormat("Bld Export started... %p%")
+
+        self.progressBar.setRange(0, 0) 
+        self.progressBar.setTextVisible(True)
         self.progressBar.show()
         self.cancel_export.show()
         self.one_worker = OneFileExportWorker(data_, path, obj_prefix, script_name, self.cpk_colors, 
